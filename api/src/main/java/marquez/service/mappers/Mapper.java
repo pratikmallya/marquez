@@ -49,7 +49,6 @@ import marquez.common.models.SourceType;
 import marquez.common.models.TagName;
 import marquez.common.models.Version;
 import marquez.db.models.DatasetFieldRow;
-import marquez.db.models.DatasetRow;
 import marquez.db.models.DatasetVersionRow;
 import marquez.db.models.ExtendedDatasetRow;
 import marquez.db.models.ExtendedRunRow;
@@ -64,7 +63,6 @@ import marquez.db.models.RunRow;
 import marquez.db.models.RunStateRow;
 import marquez.db.models.SourceRow;
 import marquez.db.models.StreamVersionRow;
-import marquez.db.models.TagRow;
 import marquez.service.models.Dataset;
 import marquez.service.models.DatasetMeta;
 import marquez.service.models.DatasetVersion;
@@ -82,7 +80,6 @@ import marquez.service.models.SourceMeta;
 import marquez.service.models.Stream;
 import marquez.service.models.StreamMeta;
 import marquez.service.models.StreamVersion;
-import marquez.service.models.Tag;
 
 public final class Mapper {
   private Mapper() {}
@@ -267,28 +264,6 @@ public final class Mapper {
         createdByRun);
   }
 
-  public static DatasetRow toDatasetRow(
-      @NonNull final UUID namespaceRowUuid,
-      @NonNull final UUID sourceRowUuid,
-      @NonNull final DatasetName name,
-      @NonNull final DatasetMeta meta,
-      @NonNull final List<UUID> tagUuids) {
-    final Instant now = newTimestamp();
-    return new DatasetRow(
-        newRowUuid(),
-        toDatasetType(meta).toString(),
-        now,
-        now,
-        namespaceRowUuid,
-        sourceRowUuid,
-        name.getValue(),
-        meta.getPhysicalName().getValue(),
-        tagUuids,
-        null,
-        meta.getDescription().orElse(null),
-        null);
-  }
-
   private static DatasetType toDatasetType(@NonNull final DatasetMeta meta) {
     if (meta instanceof DbTableMeta) {
       return DatasetType.DB_TABLE;
@@ -305,60 +280,6 @@ public final class Mapper {
         FieldType.valueOf(row.getType()),
         tags,
         row.getDescription().orElse(null));
-  }
-
-  public static DatasetFieldRow toDatasetFieldRow(
-      @NonNull final UUID datasetUuid, @NonNull final Field field, @NonNull List<UUID> tagUuids) {
-    final Instant now = Instant.now();
-    return new DatasetFieldRow(
-        newRowUuid(),
-        field.getType().toString(),
-        now,
-        now,
-        datasetUuid,
-        field.getName().getValue(),
-        tagUuids,
-        field.getDescription().orElse(null));
-  }
-
-  public static DatasetVersionRow toDatasetVersionRow(
-      @NonNull final UUID datasetUuid,
-      @NonNull final Version version,
-      @NonNull final List<UUID> fieldUuids,
-      @NonNull final DatasetMeta meta) {
-    if (meta instanceof StreamMeta) {
-      return toStreamVersionRow(datasetUuid, version, fieldUuids, meta);
-    }
-    return new DatasetVersionRow(
-        newRowUuid(),
-        newTimestamp(),
-        datasetUuid,
-        version.getValue(),
-        fieldUuids,
-        meta.getRunId().map(RunId::getValue).orElse(null));
-  }
-
-  private static DatasetVersionRow toStreamVersionRow(
-      @NonNull final UUID datasetUuid,
-      @NonNull final Version version,
-      @NonNull final List<UUID> fieldUuids,
-      @NonNull final DatasetMeta meta) {
-    return new StreamVersionRow(
-        newRowUuid(),
-        newTimestamp(),
-        datasetUuid,
-        version.getValue(),
-        fieldUuids,
-        meta.getRunId().map(RunId::getValue).orElse(null),
-        ((StreamMeta) meta).getSchemaLocation().toString());
-  }
-
-  public static Tag toTag(@NonNull final TagRow row) {
-    return new Tag(TagName.of(row.getName()), row.getDescription().orElse(null));
-  }
-
-  public static List<Tag> toTags(@NonNull final List<TagRow> rows) {
-    return rows.stream().map(Mapper::toTag).collect(toImmutableList());
   }
 
   public static Job toJob(

@@ -30,6 +30,7 @@ import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
+import marquez.client.models.Dataset;
 import marquez.client.models.DatasetId;
 import marquez.client.models.DbTable;
 import marquez.client.models.DbTableMeta;
@@ -146,12 +147,53 @@ public class MarquezAppIntegrationTest extends BaseIntegrationTest {
   }
 
   @Test
-  public void testApp_createDbTable() {
+  public void testDatasetFieldChange() {
+    createNamespace(NAMESPACE_NAME);
+
+    String datasetName = "public.mytable";
+    List<Field> fields =
+        ImmutableList.of(
+            Field.builder().name("a").type("INTEGER").build(),
+            Field.builder().name("b").type("TIMESTAMP").build());
+    final DbTableMeta dbTableMeta =
+        DbTableMeta.builder()
+            .physicalName(datasetName)
+            .sourceName("my-source")
+            .fields(fields)
+            .build();
+
+    client.createDataset(NAMESPACE_NAME, datasetName, dbTableMeta);
+    Dataset dataset = client.getDataset(NAMESPACE_NAME, datasetName);
+    assertThat(dataset.getFields()).isEqualTo(fields);
+
+    List<Field> newFields =
+        ImmutableList.of(
+            Field.builder().name("a").type("INTEGER").build(),
+            Field.builder().name("b-fix").type("STRING").build());
+
+    final DbTableMeta newDbTableMeta =
+        DbTableMeta.builder()
+            .physicalName(datasetName)
+            .sourceName("my-source")
+            .fields(newFields)
+            .build();
+
+    client.createDataset(NAMESPACE_NAME, datasetName, newDbTableMeta);
+    Dataset updatedDataset = client.getDataset(NAMESPACE_NAME, datasetName);
+    assertThat(updatedDataset.getFields()).isEqualTo(newFields);
+  }
+
+  private void createNamespace(String namespaceName) {
     // (1) Create namespace for db table
     final NamespaceMeta namespaceMeta =
         NamespaceMeta.builder().ownerName(OWNER_NAME).description(NAMESPACE_DESCRIPTION).build();
 
-    client.createNamespace(NAMESPACE_NAME, namespaceMeta);
+    client.createNamespace(namespaceName, namespaceMeta);
+  }
+
+  @Test
+  public void testApp_createDbTable() {
+    createNamespace(NAMESPACE_NAME);
 
     // (2) Create source for db table
     final SourceMeta sourceMeta =
