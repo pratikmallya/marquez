@@ -21,7 +21,7 @@ buildscript {
     dependencies {
         classpath 'com.adarshr:gradle-test-logger-plugin:2.1.1'
         classpath 'com.github.jengelman.gradle.plugins:shadow:6.1.0'
-        classpath 'gradle.plugin.com.github.spotbugs.snom:spotbugs-gradle-plugin:4.7.0'
+        classpath 'gradle.plugin.com.github.spotbugs.snom:spotbugs-gradle-plugin:4.6.0'
         classpath 'com.diffplug.spotless:spotless-plugin-gradle:5.10.2'
         classpath 'net.researchgate:gradle-release:2.8.1'
     }
@@ -43,6 +43,12 @@ subprojects {
     apply plugin: 'com.github.spotbugs'
     apply plugin: "com.diffplug.spotless"
     apply plugin: 'net.researchgate.release'
+
+    compileTestJava.doFirst {
+        if (project.hasProperty("jdk8.build") && System.getenv("JDK8_HOME")) {
+            println "Switching build to JDK8 installation at ${System.getenv('JDK8_HOME')}"
+        }
+    }
 
     project(':api') {
         apply plugin: 'application'
@@ -69,12 +75,28 @@ subprojects {
         options.incremental = true
         options.compilerArgs << '-parameters'
         options.encoding = "UTF-8"
+        if (project.hasProperty("jdk8.build")) {
+            options.fork = true
+            sourceCompatibility = JavaVersion.VERSION_1_8
+            targetCompatibility = JavaVersion.VERSION_1_8
+        }
     }
 
     compileTestJava {
         options.incremental = true
         options.compilerArgs << '-parameters'
         options.encoding = "UTF-8"
+        if (project.hasProperty("jdk8.build")) {
+            sourceCompatibility = JavaVersion.VERSION_1_8
+            targetCompatibility = JavaVersion.VERSION_1_8
+            options.fork = true
+        }
+    }
+
+    tasks.withType(Test) {
+        if (project.hasProperty("jdk8.build") && System.getenv("JDK8_HOME")) {
+            test.executable = "${System.getenv('JDK8_HOME')}/bin/java"
+        }
     }
 
     task sourceJar(type: Jar) {
